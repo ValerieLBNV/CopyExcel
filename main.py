@@ -35,23 +35,24 @@ def archive(version):
     new_worksheet['A1'].value = version
     new_workbook.save(destination)
 
+#TODO: Create a copy of output file before adding anything
 
 def find_starting_cell(output_version_cell, output_worksheet, output_version_column, version):
     chosen_cell = ''
-    for number in range(output_version_cell.row + 1, output_worksheet.max_row):
+    for number in range(output_version_cell.row+1, output_worksheet.max_row+1): #row+1: excl.header, max+1 incl last max row
         chosen_cell = output_worksheet.cell(number, output_version_column)
-
         # case 1 where we found a cell with the same version
         if chosen_cell.value == int(version):
             return chosen_cell
     # case 2 where we did not find a cell with the same version, and we return the last cell in the column
-    return chosen_cell
-
- #todo change as value
+    return output_worksheet.cell(chosen_cell.row+1, chosen_cell.column)
 
 def copy_data(version):
     # loading from input excel
-    input_worksheet = load_input_worksheet()
+    input_workbook = xl.load_workbook(INPUT_PATH, data_only=True)
+    input_worksheet = input_workbook[SHEET_NAME]
+
+    # input_worksheet = load_input_worksheet()
     input_version_cell = get_version_cell(input_worksheet)
     input_version_cell_below = input_worksheet.cell(input_version_cell.row +1, input_version_cell.column) # eliminate header row
 
@@ -73,18 +74,16 @@ def copy_data(version):
         cell_counter = 0
         for cell in row:
             if cell_counter == 0: # overwrite all value of version cells to indicated version
-                output_worksheet.cell(chosen_cell.row + row_counter, chosen_cell.column).value = version
+                output_worksheet.cell(chosen_cell.row + row_counter, chosen_cell.column).value = int(version)
             else: # paste the rest of cell range
                 output_worksheet.cell(chosen_cell.row + row_counter, chosen_cell.column + cell_counter).value = cell.value
             cell_counter += 1
         row_counter += 1
-    # TODO: paste only value
 
     #  output_worksheet.cell(chosen_cell.row + row_counter, chosen_cell.column) <- specify coordinate of each cell
 
+    # TODO: delete previous data of 1 measure
     output_workbook.save(OUTPUT_PATH)
-    # TODO: instead of print, copy this to the output file with 2 scenarios: if find same version number then overwrite, if not, then write below where first blank
-
 
 def get_version_cell(sheet):
     for row in sheet:
@@ -93,8 +92,6 @@ def get_version_cell(sheet):
             if value.lower() == "version":
                 return cell
     raise ValueError('There is no specified cell')
-
-
 # create: make a copy of the output file before changing anything to prevent accidental overwrites
 
 def main():
